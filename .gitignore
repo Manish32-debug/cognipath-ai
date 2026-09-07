@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.db
+backend/models/*.joblib
+backend/models/evaluation.json
+node_modules/
+dist/
+.env
+.DS_Store

@@ -1,0 +1,106 @@
+"""CogniPath AI - FastAPI application entrypoint.
+
+Kept thin on purpose: wiring, middleware, error handlers and lifespan only. All
+business logic lives in `app/services`, `app/ml`, `app/graph` and
+`app/recommendations`.
+"""
+
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.api.routes import analysis, auth, students
+from app.core.config import settings
+from app.database import db
+from app.database.db import DatabaseError
+from app.graph.knowledge_graph import get_graph
+from app.ml.predictor import ModelNotTrainedError, model_info
+from app.services.pipeline import StudentNotFound
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("cognipath")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db.init_db()
+    get_graph()                      # build and cache the curriculum DAG once
+    try:
+        log.info("Models loaded: %s", model_info())
+    except ModelNotTrainedError:
+        log.warning(
+            "No trained model bundle found. Prediction endpoints will return 503 "
+            "until you run: python -m app.ml.train"
+        )
+    if settings.using_default_secret:
+        log.warning("COGNIPATH_SECRET is unset - using the development JWT secret.")
+    yield
+
+
+app = FastAPI(
+    title="CogniPath AI API",
+    version=settings.version,
+    description=(
+        "Explainable AI for student performance prediction, prerequisite "
+        "root-cause diagnosis and personalised learning recommendations.\n\n"
+        "**Responsible use:** predictions are statistical estimates intended to "
+        "trigger human review, not automated decisions about students."
+    ),
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth.router)
+app.include_router(students.router)
+app.include_router(analysis.router)
+
+
+@app.exception_handler(StudentNotFound)
+async def student_not_found_handler(request: Request, exc: StudentNotFound):
+    return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)})
+
+
+@app.exception_handler(ModelNotTrainedError)
+async def model_missing_handler(request: Request, exc: ModelNotTrainedError):
+    return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        content={"detail": str(exc)})
+
+
+@app.exception_handler(DatabaseError)
+async def database_error_handler(request: Request, exc: DatabaseError):
+    log.exception("Database failure on %s", request.url.path)
+    return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        content={"detail": "Database error"})
+
+
+@app.get("/api/health", tags=["system"])
+def health() -> dict:
+    try:
+        models = model_info()
+        model_status = "loaded"
+    except ModelNotTrainedError:
+        models, model_status = None, "missing"
+    return {
+        "status": "ok",
+        "version": settings.version,
+        "models": model_status,
+        "model_info": models,
+        "database": str(settings.database_path.name),
+    }
+
+
+@app.get("/", tags=["system"])
+def root() -> dict:
+    return {"name": settings.app_name, "docs": "/docs", "health": "/api/health"}
