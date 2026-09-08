@@ -1,8 +1,12 @@
 """SQLite persistence layer.
 
-Plain `sqlite3` from the standard library rather than an ORM: the schema is four
-tables, the queries are simple, and a viva examiner can read the SQL. Every
-connection uses row factories so results come back as dicts.
+Plain `sqlite3` from the standard library rather than an ORM: the queries are
+simple and a viva examiner can read the SQL. Every connection uses row factories
+so results come back as dicts.
+
+This module owns the core tables (users, students, concept_mastery, predictions).
+The question bank, learning resources, sample papers and practice attempts live
+in `app.database.practice_db`, whose schema `init_db` also applies.
 
 Privacy: the tables store a `student_id` and an optional display name. No email,
 address, phone number or other identifying data is collected.
@@ -85,8 +89,20 @@ def get_conn(path: Path | None = None) -> Iterator[sqlite3.Connection]:
 
 
 def init_db(path: Path | None = None) -> None:
+    """Create every table if absent. Safe to run against an existing database:
+    all statements are CREATE TABLE / CREATE INDEX IF NOT EXISTS, so no existing
+    row is touched and the call is idempotent."""
+    # Imported here rather than at module scope: practice_db imports get_conn
+    # from this module.
+    from app.database import practice_db
+
     with get_conn(path) as conn:
+        # Write-ahead logging: submitting a practice session writes attempts,
+        # mastery rows and history in one request. WAL lets readers continue
+        # during those writes and is persistent once set on the database file.
+        conn.execute("PRAGMA journal_mode = WAL")
         conn.executescript(SCHEMA)
+        practice_db.init_content_schema(conn)
 
 
 # --------------------------------------------------------------------------- #

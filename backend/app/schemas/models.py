@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 Yes = Literal["yes", "no"]
 
@@ -83,7 +83,7 @@ class ExplanationResponse(BaseModel):
 class MasteryRecord(BaseModel):
     concept: str
     mastery: float = Field(..., ge=0, le=100)
-    source: Literal["simulated", "self_reported", "assessment"] = "self_reported"
+    source: Literal["simulated", "self_reported", "assessment", "practice"] = "self_reported"
 
 
 class MasteryUpdate(BaseModel):
@@ -132,3 +132,127 @@ class TokenResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+# --------------------------------------------------------------------------- #
+# Question bank, resources, sample papers and practice
+# --------------------------------------------------------------------------- #
+
+Difficulty = Literal["Easy", "Medium", "Hard"]
+QuestionType = Literal["MCQ", "Numerical", "Theory"]
+ResourceType = Literal["Video", "Article", "Notes", "PDF", "Exercise"]
+
+
+class QuestionOption(BaseModel):
+    key: str = Field(..., min_length=1, max_length=4)
+    text: str = Field(..., min_length=1, max_length=500)
+
+
+class QuestionCreate(BaseModel):
+    """A bank question. `concept` must be a knowledge-graph concept id
+    (`differential_equations`), not a display label - the route validates it
+    against CONCEPTS the same way the mastery endpoint does."""
+
+    subject: str = Field(..., min_length=2, max_length=60)
+    concept: str = Field(..., min_length=2, max_length=60)
+    difficulty: Difficulty
+    question_type: QuestionType
+    question_text: str = Field(..., min_length=5, max_length=2000)
+    options: list[QuestionOption] | None = None
+    correct_answer: str = Field(..., min_length=1, max_length=500)
+    explanation: str | None = Field(None, max_length=2000)
+    marks: float = Field(1.0, gt=0, le=100)
+    tolerance: float | None = Field(None, ge=0, description="Numerical answers only")
+    source: str | None = Field(None, max_length=120)
+
+    @field_validator("options")
+    @classmethod
+    def unique_keys(cls, v):
+        if v and len({o.key.upper() for o in v}) != len(v):
+            raise ValueError("option keys must be unique")
+        return v
+
+    @model_validator(mode="after")
+    def check_type_consistency(self):
+        if self.question_type == "MCQ":
+            if not self.options or len(self.options) < 2:
+                raise ValueError("MCQ questions need at least two options")
+            keys = {o.key.strip().upper() for o in self.options}
+            if self.correct_answer.strip().upper() not in keys:
+                raise ValueError("correct_answer must match one of the option keys")
+        else:
+            if self.options:
+                raise ValueError(f"{self.question_type} questions must not carry options")
+        if self.question_type == "Numerical":
+            try:
+                float(self.correct_answer.replace(",", "."))
+            except ValueError:
+                raise ValueError("Numerical questions need a numeric correct_answer")
+        return self
+
+
+class QuestionUpdate(BaseModel):
+    subject: str | None = Field(None, min_length=2, max_length=60)
+    concept: str | None = Field(None, min_length=2, max_length=60)
+    difficulty: Difficulty | None = None
+    question_type: QuestionType | None = None
+    question_text: str | None = Field(None, min_length=5, max_length=2000)
+    options: list[QuestionOption] | None = None
+    correct_answer: str | None = Field(None, min_length=1, max_length=500)
+    explanation: str | None = Field(None, max_length=2000)
+    marks: float | None = Field(None, gt=0, le=100)
+    tolerance: float | None = Field(None, ge=0)
+    source: str | None = Field(None, max_length=120)
+    is_active: bool | None = None
+
+
+class ResourceCreate(BaseModel):
+    title: str = Field(..., min_length=2, max_length=160)
+    subject: str = Field(..., min_length=2, max_length=60)
+    concept: str = Field(..., min_length=2, max_length=60)
+    resource_type: ResourceType
+    difficulty: Difficulty = "Medium"
+    description: str | None = Field(None, max_length=1000)
+    url: str | None = Field(None, max_length=500)
+    estimated_minutes: int = Field(20, gt=0, le=600)
+
+    @field_validator("url")
+    @classmethod
+    def http_url(cls, v):
+        if v and not v.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        return v
+
+
+class ResourceUpdate(BaseModel):
+    title: str | None = Field(None, min_length=2, max_length=160)
+    subject: str | None = Field(None, min_length=2, max_length=60)
+    concept: str | None = Field(None, min_length=2, max_length=60)
+    resource_type: ResourceType | None = None
+    difficulty: Difficulty | None = None
+    description: str | None = Field(None, max_length=1000)
+    url: str | None = Field(None, max_length=500)
+    estimated_minutes: int | None = Field(None, gt=0, le=600)
+    is_active: bool | None = None
+
+
+class PracticeStartRequest(BaseModel):
+    concept: str = Field(..., min_length=2, max_length=60)
+    difficulty: Difficulty | None = None
+    count: int = Field(5, ge=1, le=25)
+    origin: Literal["manual", "recommended", "root_cause"] = "manual"
+
+
+class SubmittedAnswer(BaseModel):
+    question_id: int
+    selected_answer: str | None = Field(None, max_length=1000)
+    time_taken: float | None = Field(None, ge=0, le=7200)
+    self_marked_correct: bool | None = Field(
+        None, description="Theory questions only - the student marks their own answer"
+    )
+
+
+class PracticeSubmitRequest(BaseModel):
+    session_id: int
+    answers: list[SubmittedAnswer] = Field(..., min_length=1, max_length=50)
+    elapsed_seconds: float | None = Field(None, ge=0)
