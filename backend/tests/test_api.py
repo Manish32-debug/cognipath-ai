@@ -35,7 +35,7 @@ def test_dashboard_returns_full_pipeline(client, student_headers):
                 "recommendations", "study_plan", "cognitive_twin"):
         assert key in body, key
     assert body["explanation"]["top_contributions"]
-    assert body["mastery"]["source"] in {"simulated", "self_reported", "assessment", "mixed"}
+    assert body["mastery"]["source"] in {"simulated", "self_reported", "assessment", "practice", "mixed"}
 
 
 def test_predict_validates_feature_ranges(client, teacher_headers, sample_features):
