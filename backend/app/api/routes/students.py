@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.deps import authorise_student, current_user, require_teacher
 from app.database import db
@@ -100,8 +100,10 @@ def dashboard(student_id: str, user: dict = Depends(current_user)) -> dict:
     return result
 
 
-@router.delete("/{student_id}")
-def delete_student(student_id: str, user: dict = Depends(require_teacher)) -> None:
+@router.delete("/{student_id}", status_code=status.HTTP_204_NO_CONTENT,
+               response_class=Response)
+def delete_student(student_id: str, user: dict = Depends(require_teacher)) -> Response:
     if not db.get_student(student_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Student '{student_id}' not found")
     db.delete_student(student_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
