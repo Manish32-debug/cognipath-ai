@@ -39,8 +39,13 @@ CogniPath AI addresses three gaps:
 | Recommendation engine | Transparent priority scoring over concepts + curated resources |
 | Study plan | Weekly schedule derived from the student's own time budget and risk |
 | Cognitive Digital Twin | Five estimated learning-profile indices, each labelled with its basis |
-| Student dashboard | Ten sections: overview, performance, prediction, explainability, mastery, root cause, recommendations, plan, twin, settings |
-| Teacher dashboard | Cohort risk distribution, weakest-concept ranking, search/filter, per-student drill-down |
+| Question bank | MCQ / Numerical / Theory items mapped to knowledge-graph concepts, teacher-managed |
+| Practice | Recommended and free practice sessions, graded server side with per-question explanations |
+| Learning-state update | Practice performance moves concept mastery through a damped, transparent, configurable rule |
+| Resource library | Study materials per concept, recommended by the same priority ranking as everything else |
+| Sample papers | PDF storage, upload validation and authenticated download |
+| Student dashboard | Fourteen sections: overview, performance, prediction, explainability, mastery, root cause, recommendations, plan, practice, practice history, study materials, sample papers, twin, settings |
+| Teacher dashboard | Cohort risk distribution, weakest-concept ranking, search/filter, per-student drill-down, question bank, resource and paper management, practice analytics |
 | Auth | JWT + PBKDF2-SHA256, server-enforced role separation |
 
 ## 3. Architecture
@@ -294,7 +299,8 @@ python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\
 pip install -r requirements.txt
 
 python -m app.ml.train          # trains, compares, selects, saves models/ + evaluation.json
-python -m app.database.seed     # creates cognipath.db and the 60-student demo cohort
+python -m app.database.seed     # cognipath.db, 60-student demo cohort, question bank,
+                                # resource library and demo sample papers
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -307,6 +313,17 @@ npm run dev                     # http://localhost:5173 (proxies /api to port 80
 ```
 
 Or use the bundled scripts: `./run_backend.sh` then `./run_frontend.sh`.
+
+`app.database.seed` calls `app.database.seed_content` for you. To reseed only the question
+bank, resources and demo papers against an existing database — which is what you want on a
+deployed instance whose student data already exists — run it directly:
+
+```bash
+cd backend && python -m app.database.seed_content
+```
+
+Both seeders are idempotent: they insert only rows that are absent and never overwrite
+existing student, mastery or attempt data.
 
 ### Demo credentials
 
@@ -336,12 +353,27 @@ Interactive docs at **`http://127.0.0.1:8000/docs`** (23 documented paths).
 | GET | `/api/recommendations/{id}`, `/api/study-plan/{id}`, `/api/cognitive-twin/{id}` | |
 | GET | `/api/teacher/analytics`, `/api/teacher/student/{id}` | teacher only |
 | GET | `/api/model-info`, `/api/evaluation`, `/api/health` | system |
+| GET | `/api/practice/config` | the exact constants used for selection and the mastery update |
+| GET | `/api/practice/recommended/{id}` | what to practise, how much, at what difficulty, and why |
+| POST | `/api/practice/start?student_id={id}` | open a session; questions are served **without** answers |
+| POST | `/api/practice/submit` | grade, update learning state, re-run root cause, return the delta |
+| GET | `/api/practice/history/{id}`, `/api/practice/performance/{id}` | session log / concept statistics |
+| GET/POST | `/api/questions` | list (answers withheld from students) / create (teacher) |
+| GET | `/api/questions/bank-summary` | per-concept coverage by difficulty |
+| GET/PUT/DELETE | `/api/questions/{id}` | read / edit / retire (teacher writes) |
+| GET/POST | `/api/resources` | library listing / create (teacher) |
+| GET | `/api/resources/recommended/{id}` | concept-prioritised materials with reasons |
+| PUT/DELETE | `/api/resources/{id}` | edit / retire (teacher) |
+| GET/POST | `/api/sample-papers` | listing / multipart PDF upload (teacher) |
+| GET | `/api/sample-papers/{id}/file?download=true` | authenticated inline view or download |
+| DELETE | `/api/sample-papers/{id}` | remove (teacher) |
+| GET | `/api/teacher/practice-analytics` | cohort practice aggregates (teacher) |
 
 ## 15. Testing
 
 ```bash
-cd backend  && pytest -q      # 47 passed
-cd frontend && npm test       # 12 passed
+cd backend  && pytest -q      # 85 passed
+cd frontend && npm test       # 20 passed
 ```
 
 Backend coverage includes: derived-column correctness, target-rule correctness, model monotonicity
@@ -350,8 +382,15 @@ Backend coverage includes: derived-column correctness, target-rule correctness, 
 graph paths"), recommendation prioritisation, study-plan budget bounds, RBAC 401/403, validation
 422s, and a full create-student → dashboard → delete round trip.
 
+`tests/test_practice.py` adds grading correctness for all three question types, damping and
+bounds on the learning-state update, answer non-disclosure to students, question-bank CRUD and
+concept validation, the full root-cause → practice → mastery → root-cause loop, proof that
+practice does **not** change the prediction or its SHAP values, session replay rejection,
+upload content sniffing, and RBAC on every new write path.
+
 Frontend tests render the prediction, root-cause, recommendation, study-plan, mastery and error
-components against representative API payloads.
+components against representative API payloads, plus the practice runner (selection → submit
+payload → results), the resource and sample-paper pages, and practice-history empty states.
 
 ## 16. Error handling and loading states
 
@@ -375,6 +414,19 @@ with a message telling you to run the training command.
 5. **Cognitive Twin traits are proxies**, not psychometric measurements.
 6. **Small test set** (79 records) — metrics carry meaningful variance.
 7. **Prototype auth.** Correct primitives, but no lockout, rate limiting or refresh-token rotation.
+8. **Mastery is a learning-state estimate, not a measurement.** The update rule in
+   `app/practice/mastery_update.py` is transparent bookkeeping, not item-response theory. It is
+   reproducible by hand from the stored attempts and the config, and that is the whole of its
+   claim.
+9. **Theory questions are self-marked.** There is no defensible way to grade free text here, so
+   the student marks their own answer against the model answer. Self-marked attempts are stored
+   with `graded_by='self'` and excluded from the learning-state update by default.
+10. **Thin question bank.** 42 seeded questions across 14 concepts. The recommender can ask for
+    up to 15 questions on a concept where only three exist; the UI reports what is actually
+    available, and the teacher analytics page shows which concepts are starved.
+11. **Sample papers are generated placeholders.** They carry no institutional status and are not
+    official or previous-year university papers.
+12. **Uploads are not durable on ephemeral hosting.** See section 21.
 
 ## 18. Responsible AI
 
@@ -397,3 +449,199 @@ appears.
 Cortez, P. and Silva, A. (2008). *Using Data Mining to Predict Secondary School Student
 Performance.* Proceedings of 5th FUture BUsiness TEChnology Conference.
 Lundberg, S. and Lee, S.-I. (2017). *A Unified Approach to Interpreting Model Predictions.* NeurIPS.
+
+---
+
+## 21. Question bank, practice and the learning-state loop
+
+This section documents the extension added on top of the original prediction → explanation →
+graph → recommendation pipeline.
+
+### 21.1 The loop
+
+```
+weak concept
+   -> root-cause propagation over the prerequisite DAG
+   -> recommended study material  (app/practice/selector.py + resources table)
+   -> recommended questions       (count and difficulty derived, not fixed)
+   -> student practice            (POST /api/practice/start)
+   -> grading                     (app/practice/scoring.py)
+   -> learning-state update       (app/practice/mastery_update.py -> concept_mastery)
+   -> root-cause recalculation    (re-run inside the same request)
+```
+
+`POST /api/practice/submit` performs the last four steps and returns the mastery delta and the
+recomputed diagnosis. The frontend renders that payload and derives nothing.
+
+### 21.2 Database changes
+
+Six additive tables, every statement `CREATE TABLE IF NOT EXISTS`, applied by `db.init_db()` via
+`practice_db.init_content_schema()`. No existing table is altered and no existing row is touched.
+
+| Table | Purpose |
+|---|---|
+| `questions` | bank items; `concept` holds a knowledge-graph id, `options` is JSON, `is_active` supports soft delete |
+| `resources` | study material per concept, with type, difficulty and estimated minutes |
+| `sample_papers` | paper metadata, including `is_demo` |
+| `sample_paper_files` | PDF bytes, separated so listing papers never drags blobs through the row factory |
+| `practice_sessions` | one row per started session; `served_questions` pins which items were issued |
+| `practice_attempts` | one row per graded answer; `concept` and `difficulty` are denormalised so teacher edits cannot rewrite history |
+| `mastery_history` | audit trail of every learning-state change with the inputs that produced it |
+
+`init_db()` also sets `PRAGMA journal_mode = WAL`. Submitting a session writes attempts, mastery
+rows and history in one request; WAL lets readers continue during those writes.
+
+Two behavioural notes on existing structures: `MasteryRecord.source` gained a fourth value,
+`practice`, and `concept_mastery` is written through the existing `db.set_mastery` so the provenance
+label the UI already renders stays truthful (a student with both simulated and practice-derived
+concepts reports `mixed`).
+
+### 21.3 Recommendation logic
+
+No new ranking was introduced. `app.recommendations.engine.score_concepts` already orders concepts by
+
+```
+0.45 * root-cause evidence + 0.30 * mastery gap
++ 0.15 * downstream impact + 0.10 * predicted risk
+```
+
+`app/practice/selector.py` consumes that ordering and decides only *how much and how hard*:
+
+* **question count** scales linearly between `MIN_QUESTIONS` (5) and `MAX_QUESTIONS` (15) by the
+  concept's priority relative to the top-ranked concept;
+* **difficulty** comes from current mastery — Easy below 40%, Hard above 65%, Medium between;
+* **reason** (the explainable-AI requirement) is generated from graph facts: the mastery figure, the
+  target, whether backward propagation flagged the concept as a root cause, and how many descendants
+  depend on it.
+
+Nothing is per-student hardcoded. `test_recommendations_differ_between_students` asserts that two
+demo students receive different concept/count/difficulty signatures.
+
+### 21.4 Practice scoring
+
+| Type | Grading |
+|---|---|
+| MCQ | exact match on the option key, or on the option text if the client posts that instead |
+| Numerical | float comparison within a per-question `tolerance`, defaulting to relative 1%; accepts `3,14`, `3.14e0` and simple fractions |
+| Theory | **not auto-graded** — the student self-marks against the model answer; stored as `graded_by='self'` |
+
+No partial credit: a wrong answer scores zero out of the question's `marks`.
+
+### 21.5 Learning-state update
+
+```
+weighted_accuracy = sum(w_d * correct) / sum(w_d)          w = {Easy 0.7, Medium 1.0, Hard 1.4}
+alpha_eff         = ALPHA * min(1, n_graded / N_REF)       ALPHA = 0.30, N_REF = 8
+new               = (1 - alpha_eff) * old + alpha_eff * weighted_accuracy * 100
+```
+
+Clamped to `[0, 100]` and to ±`MAX_DELTA_PER_SESSION` (15 points). Every change is written to
+`mastery_history` with `previous`, `updated`, `practice_score`, `alpha_effective`, `n_attempts` and
+the session id, so any mastery figure in the system can be recomputed by hand.
+
+The damping term is the point. A plain `0.7*old + 0.3*accuracy` blend lets three lucky MCQs move
+mastery by twenty points, which would let a student swing their own root-cause diagnosis by
+answering a handful of easy items. Difficulty weighting exists for the same reason: a correct Hard
+answer is stronger evidence than a correct Easy one.
+
+**Mastery is not an ML input.** `StudentFeatures` contains no mastery fields, so this update cannot
+change predicted GPA, pass probability, risk tier or any SHAP value. It feeds the prerequisite
+graph, root-cause analysis, recommendations, the weekly plan and the cognitive twin. This is
+asserted by `test_practice_does_not_change_the_prediction_or_shap`. It is also why the submit
+response says so explicitly to the student: practising raises the learning-state estimate, not the
+prediction.
+
+Every constant above is overridable from the environment and is returned verbatim by
+`GET /api/practice/config`.
+
+### 21.6 New frontend routes
+
+| Route | Page |
+|---|---|
+| `/app/practice` | recommended practice, free practice, question runner, results |
+| `/app/practice-history` | concept statistics, mastery trajectory, session log |
+| `/app/resources` | AI-recommended materials with reasons, plus the full library |
+| `/app/sample-papers` | papers grouped by subject, authenticated view/download |
+| `/teacher` | cohort overview (unchanged, now the index route) |
+| `/teacher/questions` | question bank CRUD |
+| `/teacher/resources` | study material CRUD |
+| `/teacher/sample-papers` | PDF upload and management |
+| `/teacher/practice-analytics` | cohort practice aggregates |
+
+`TeacherDashboard.jsx` became a nested-route layout to host the new teacher pages; the cohort view
+moved verbatim to `pages/teacher/Cohort.jsx`.
+
+**Router ordering matters in `main.py`.** The SPA fallback registers `GET /{full_path:path}`.
+FastAPI matches in registration order, so a router included below it would be shadowed and every new
+GET would silently return `index.html` instead of JSON. New routers go in the `include_router` block
+above it.
+
+### 21.7 Seed data
+
+`python -m app.database.seed_content` inserts 42 questions across 14 concepts (MCQ, Numerical and
+Theory, at all three difficulties), 23 resources linking to freely available material (MIT
+OpenCourseWare, Khan Academy, 3Blue1Brown, Paul's Online Notes), and 4 demo sample papers.
+
+The demo PDFs are **generated at seed time** by a small hand-rolled writer in `seed_content.py`
+rather than committed as binaries or produced with reportlab, which would add a build dependency for
+four placeholder files. Every one of them is stored with `is_demo=1`, contains a disclaimer in its
+body text, and is labelled as a placeholder in both the API response and the UI. They are not
+official or previous-year university papers.
+
+## 22. Deployment
+
+`render.yaml` now captures the build and start commands in version control; previously they existed
+only in the Render dashboard. Reconcile it against your dashboard before switching the service to
+blueprint mode.
+
+```yaml
+buildCommand: |
+  cd frontend && npm ci && npm run build
+  cd ../backend && pip install -r requirements.txt
+  python -m app.ml.train
+  python -m app.database.seed
+  python -m app.database.seed_content
+startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+healthCheckPath: /api/health
+```
+
+`python -m app.database.seed_content` must run **unconditionally**. A build step that guards seeding
+with `[ -f cognipath.db ] || seed` will skip the question bank entirely on an instance whose
+database already exists. The content seeder is independently idempotent, so running it every deploy
+is safe.
+
+No new backend dependencies were added — `python-multipart` was already present for form parsing.
+One frontend devDependency was added: `@testing-library/user-event`.
+
+### Environment variables
+
+| Variable | Default | Notes |
+|---|---|---|
+| `COGNIPATH_SECRET` | dev placeholder | **Required in any deployment.** The app logs a warning when the fallback is used |
+| `COGNIPATH_DB` | `backend/cognipath.db` | point at a persistent mount if you attach a disk |
+| `COGNIPATH_MODELS` | `backend/models/cognipath_models.joblib` | |
+| `COGNIPATH_TOKEN_MINUTES` | `480` | JWT lifetime |
+| `COGNIPATH_DEMO_SIZE` | `60` | demo cohort size |
+| `COGNIPATH_CORS` | localhost origins | comma-separated |
+| `COGNIPATH_MASTERY_ALPHA` | `0.30` | learning-state blend weight |
+| `COGNIPATH_MASTERY_N_REF` | `8` | attempts before alpha saturates |
+| `COGNIPATH_MAX_MASTERY_DELTA` | `15` | per-session mastery cap, in points |
+| `COGNIPATH_INCLUDE_SELF_GRADED` | `0` | count self-marked Theory answers toward mastery |
+| `COGNIPATH_W_EASY` / `_MEDIUM` / `_HARD` | `0.7` / `1.0` / `1.4` | difficulty weights |
+| `COGNIPATH_MIN_QUESTIONS` / `_MAX_QUESTIONS` | `5` / `15` | recommended session size bounds |
+| `COGNIPATH_EASY_BELOW` / `_HARD_ABOVE` | `40` / `65` | difficulty band thresholds |
+| `COGNIPATH_MAX_PDF_BYTES` | `10485760` | sample-paper upload cap |
+
+### Persistence warning
+
+Render's filesystem is ephemeral. `.gitignore` excludes `*.db` and `models/*.joblib`, so both are
+rebuilt at build time. Consequences without a persistent disk:
+
+* demo students, questions, resources and demo papers are recreated by the build step, so the
+  application still works after a redeploy;
+* **teacher-uploaded PDFs, student practice attempts and mastery history are lost.**
+
+To keep them, attach a Render disk and point `COGNIPATH_DB` at the mount. Note that a disk forces a
+single instance, disables zero-downtime deploys, and is unavailable on the free plan. The teacher
+sample-papers page states this limitation in the UI rather than letting staff discover it after a
+deploy.

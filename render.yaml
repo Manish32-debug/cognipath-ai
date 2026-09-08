@@ -1,0 +1,90 @@
+# Render blueprint for CogniPath AI.
+#
+# READ THIS BEFORE APPLYING. The repository previously had no deployment config
+# at all — build and start commands lived only in the Render dashboard, where
+# they are invisible to code review and to anyone cloning the repo. This file
+# reconstructs them from what the code requires. Reconcile it against your
+# dashboard settings before switching the service over to blueprint mode;
+# if they differ, the dashboard is the source of truth for what is running today.
+#
+# Why the build step looks like this
+# ----------------------------------
+# .gitignore excludes *.db and backend/models/*.joblib, so neither the trained
+# model bundle nor the database is in the repository. Both must be produced at
+# build time or the API starts with models="missing" and an empty database.
+#
+# IMPORTANT — the content seed is a separate command. If your existing build
+# step guards seeding with something like `[ -f cognipath.db ] || seed` (as
+# run_backend.sh does), the question bank will NOT be created on an instance
+# whose database already exists. `app.database.seed_content` is independently
+# idempotent — it inserts only rows that are absent — so running it
+# unconditionally on every deploy is safe and is what keeps the question bank,
+# resource library and demo papers present.
+
+services:
+  - type: web
+    name: cognipath-ai
+    runtime: python
+    plan: free
+    region: singapore          # closest to the intended users; change as needed
+    branch: main
+
+    buildCommand: |
+      set -e
+      cd frontend && npm ci && npm run build
+      cd ../backend && pip install -r requirements.txt
+      python -m app.ml.train
+      python -m app.database.seed
+      python -m app.database.seed_content
+
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.3"
+      - key: NODE_VERSION
+        value: "22"
+
+      # REQUIRED. Without it the app falls back to the development signing key
+      # and logs a warning on every boot. Generate once, then set it in the
+      # dashboard — `generateValue` makes Render create a random value and keep
+      # it stable across deploys.
+      - key: COGNIPATH_SECRET
+        generateValue: true
+
+      # Optional. Defaults in app/core/config.py and app/practice/config.py are
+      # sensible; these are listed so the tunable surface is discoverable.
+      # - key: COGNIPATH_TOKEN_MINUTES        # JWT lifetime, default 480
+      # - key: COGNIPATH_DEMO_SIZE           # demo cohort size, default 60
+      # - key: COGNIPATH_CORS                # comma-separated origins
+      # - key: COGNIPATH_MASTERY_ALPHA       # learning-state blend weight, default 0.30
+      # - key: COGNIPATH_MASTERY_N_REF       # attempts before alpha saturates, default 8
+      # - key: COGNIPATH_MAX_MASTERY_DELTA   # per-session mastery cap in points, default 15
+      # - key: COGNIPATH_MAX_PDF_BYTES       # sample-paper upload cap, default 10485760
+      # - key: COGNIPATH_INCLUDE_SELF_GRADED # count self-marked Theory answers, default 0
+
+      # PERSISTENCE — read before relying on uploads.
+      #
+      # Render's filesystem is ephemeral. Without the disk below, cognipath.db is
+      # rebuilt on every deploy and restart. Consequences:
+      #   * demo students, questions, resources and demo papers are recreated by
+      #     the build step, so the app still works after a redeploy;
+      #   * teacher-uploaded sample-paper PDFs, student practice attempts and
+      #     mastery history are LOST.
+      #
+      # Uncomment the disk to keep them, and point COGNIPATH_DB and
+      # COGNIPATH_MODELS at the mount. Note that attaching a disk forces a
+      # single instance and disables zero-downtime deploys, and that the free
+      # plan does not support persistent disks.
+      #
+      # - key: COGNIPATH_DB
+      #   value: /var/data/cognipath.db
+      # - key: COGNIPATH_MODELS
+      #   value: /var/data/cognipath_models.joblib
+
+    # disk:
+    #   name: cognipath-data
+    #   mountPath: /var/data
+    #   sizeGB: 1
