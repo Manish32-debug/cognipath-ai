@@ -11,6 +11,10 @@ What is real and what is not
   stored with source='simulated'. The UI shows this label.
 * Predictions are NOT seeded. They are produced by the trained models when the
   API is called.
+* The question bank, resource library and sample papers come from
+  `app.database.seed_content`, which this seeder calls. Sample papers are
+  GENERATED PLACEHOLDERS, clearly labelled as demo content - not official or
+  previous-year university papers.
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ from app.core.security import hash_password
 from app.database import db
 from app.ml import features as F
 from app.ml.dataset import load_prepared
+from app.database.seed_content import seed_content
 from app.ml.mastery_simulator import mastery_records
 
 DEMO_PASSWORD = "demo1234"          # documented demo credential, not a secret
@@ -78,8 +83,11 @@ def seed(n: int | None = None, reset_users: bool = False) -> dict:
             h, s = hash_password(TEACHER_PASSWORD)
             db.create_user("teacher", h, s, "teacher", full_name="Faculty Coordinator")
 
+    content = seed_content()
+
     return {
         "students_seeded": created,
+        "content": content,
         "teacher_login": {"username": "teacher", "password": TEACHER_PASSWORD},
         "sample_student_login": {"username": "demo001", "password": DEMO_PASSWORD},
         "mastery_source": "simulated",

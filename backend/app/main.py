@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import analysis, auth, students
+from app.api.routes import analysis, auth, content, practice, students
 from app.core.config import settings
 from app.database import db
 from app.database.db import DatabaseError
@@ -84,9 +84,15 @@ app.add_middleware(
 # API ROUTES
 # ---------------------------------------------------------------------------
 
+# ORDER MATTERS. The SPA catch-all at the bottom of this file registers
+# GET /{full_path:path}. FastAPI matches routes in registration order, so any
+# router included *after* it would be shadowed and every GET would return
+# index.html instead of JSON. Register new routers here, never below.
 app.include_router(auth.router)
 app.include_router(students.router)
 app.include_router(analysis.router)
+app.include_router(practice.router)
+app.include_router(content.router)
 
 
 # ---------------------------------------------------------------------------

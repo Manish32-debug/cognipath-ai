@@ -2,6 +2,12 @@
 
     student features -> ML prediction -> SHAP -> mastery -> graph root cause
     -> recommendations -> weekly plan -> cognitive twin
+    -> recommended resources -> recommended practice
+
+Practice performance feeds back into `concept_mastery`, so the next run of this
+pipeline reasons over the updated learning state. Mastery is not an ML input, so
+that feedback changes the graph half of the pipeline (root cause, recommendations,
+plan, twin) and never the prediction or its SHAP explanation.
 
 Every stage calls the real component. Nothing in this module fabricates a value.
 """
@@ -10,10 +16,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from app.database import db
+from app.database import db, practice_db
 from app.graph import root_cause
 from app.ml import predictor
 from app.ml.mastery_simulator import mastery_records
+from app.practice import selector
 from app.recommendations import engine, study_plan
 from app.services import cognitive_twin
 
@@ -79,6 +86,13 @@ def run(student_id: str, log: bool = True, explain_task: str = "gpa") -> dict:
         roots,
     )
 
+    practice = {
+        "recommended": selector.recommended_practice(mastery, roots, prediction["risk_tier"]),
+        "totals": practice_db.totals_for_student(student_id),
+        "recent_sessions": practice_db.session_history(student_id, limit=5),
+        "concept_stats": practice_db.concept_stats(student_id),
+    }
+
     if log:
         db.log_prediction(
             student_id,
@@ -113,6 +127,7 @@ def run(student_id: str, log: bool = True, explain_task: str = "gpa") -> dict:
         "recommendations": recs,
         "study_plan": plan,
         "cognitive_twin": twin,
+        "practice": practice,
     }
 
 
