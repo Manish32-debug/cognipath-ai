@@ -15,6 +15,10 @@ const ITEMS = [
   { to: '/app/root-cause', label: 'Root cause', icon: '\u2442' },
   { to: '/app/recommendations', label: 'Recommendations', icon: '\u2726' },
   { to: '/app/study-plan', label: 'Study plan', icon: '\u2637' },
+  { to: '/app/practice', label: 'Practice', icon: '\u270E' },
+  { to: '/app/practice-history', label: 'Practice history', icon: '\u23F1' },
+  { to: '/app/resources', label: 'Study materials', icon: '\u2726' },
+  { to: '/app/sample-papers', label: 'Sample papers', icon: '\u25A5' },
   { to: '/app/twin', label: 'Cognitive twin', icon: '\u25D1' },
   { to: '/app/settings', label: 'Settings', icon: '\u2699' },
 ]

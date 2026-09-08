@@ -207,3 +207,47 @@ tbody tr:hover { background: rgba(99, 102, 241, .07); cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+/* ---------------------------------------------------------------------------
+   Practice, question bank and resource surfaces.
+   Extends the existing tokens - no new palette, no new framework.
+   --------------------------------------------------------------------------- */
+textarea {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .55rem .65rem;
+  resize: vertical;
+}
+textarea:focus { outline: none; border-color: var(--brand); }
+
+input[type='file'] {
+  padding: .4rem;
+  font-size: .85rem;
+  color: var(--muted);
+}
+input[type='file']::file-selector-button {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .35rem .7rem;
+  margin-right: .6rem;
+  cursor: pointer;
+}
+
+/* Option buttons in the question runner wrap instead of truncating. */
+.btn { white-space: normal; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+  .grid-3, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  table { font-size: .82rem; }
+}

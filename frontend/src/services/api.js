@@ -51,6 +51,40 @@ export const endpoints = {
   analytics: () => api.get('/api/teacher/analytics').then((r) => r.data),
   teacherStudent: (id) => api.get(`/api/teacher/student/${id}`).then((r) => r.data),
   createStudent: (payload) => api.post('/api/students', payload).then((r) => r.data),
+
+  // --- question bank, practice, resources and sample papers ---
+  practiceConfig: () => api.get('/api/practice/config').then((r) => r.data),
+  recommendedPractice: (id) => api.get(`/api/practice/recommended/${id}`).then((r) => r.data),
+  startPractice: (id, payload) =>
+    api.post(`/api/practice/start?student_id=${encodeURIComponent(id)}`, payload).then((r) => r.data),
+  submitPractice: (payload) => api.post('/api/practice/submit', payload).then((r) => r.data),
+  practiceHistory: (id) => api.get(`/api/practice/history/${id}`).then((r) => r.data),
+  practicePerformance: (id) => api.get(`/api/practice/performance/${id}`).then((r) => r.data),
+
+  questions: (params = {}) =>
+    api.get('/api/questions', { params }).then((r) => r.data),
+  bankSummary: () => api.get('/api/questions/bank-summary').then((r) => r.data),
+  createQuestion: (payload) => api.post('/api/questions', payload).then((r) => r.data),
+  updateQuestion: (id, payload) => api.put(`/api/questions/${id}`, payload).then((r) => r.data),
+  deleteQuestion: (id) => api.delete(`/api/questions/${id}`).then((r) => r.data),
+
+  resources: (params = {}) => api.get('/api/resources', { params }).then((r) => r.data),
+  recommendedResources: (id) =>
+    api.get(`/api/resources/recommended/${id}`).then((r) => r.data),
+  createResource: (payload) => api.post('/api/resources', payload).then((r) => r.data),
+  updateResource: (id, payload) => api.put(`/api/resources/${id}`, payload).then((r) => r.data),
+  deleteResource: (id) => api.delete(`/api/resources/${id}`).then((r) => r.data),
+
+  samplePapers: (params = {}) => api.get('/api/sample-papers', { params }).then((r) => r.data),
+  // Blob URLs are built here so the Authorization interceptor still applies -
+  // a plain <a href> would hit the endpoint without the bearer token.
+  samplePaperBlob: (id) =>
+    api.get(`/api/sample-papers/${id}/file`, { responseType: 'blob' }).then((r) => r.data),
+  uploadSamplePaper: (formData) =>
+    api.post('/api/sample-papers', formData).then((r) => r.data),
+  deleteSamplePaper: (id) => api.delete(`/api/sample-papers/${id}`).then((r) => r.data),
+
+  practiceAnalytics: () => api.get('/api/teacher/practice-analytics').then((r) => r.data),
 }
 
 export default api
