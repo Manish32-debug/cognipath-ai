@@ -11,3 +11,18 @@ export const initials = (name = '') =>
   name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || 'CP'
 
 export const STUDY_TIME_LABEL = { 1: '< 2 h / week', 2: '2-5 h / week', 3: '5-10 h / week', 4: '> 10 h / week' }
+
+
+// --- multi-subject helpers (upgrade) --------------------------------------- //
+export const trendArrow = (direction) =>
+  ({ up: '\u2191', down: '\u2193', flat: '\u2192' }[direction] || '\u2192')
+
+export const trendColor = (direction) =>
+  ({ up: '#34d399', down: '#f87171', flat: '#9aa6c4' }[direction] || '#9aa6c4')
+
+export const severityClass = (severity) =>
+  ({ high: 'badge badge-high', medium: 'badge badge-med', low: 'badge badge-low' }[severity]
+    || 'badge badge-info')
+
+export const percent = (value, digits = 0) =>
+  value === null || value === undefined ? '-' : `${Number(value).toFixed(digits)}%`

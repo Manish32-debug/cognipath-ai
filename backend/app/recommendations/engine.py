@@ -87,6 +87,148 @@ CATALOGUE: dict[str, list[dict]] = {
         {"type": "article", "title": "Numerical Methods - root finding notes", "url": "https://ocw.mit.edu/courses/18-330-introduction-to-numerical-analysis-spring-2012/", "minutes": 30},
         {"type": "practice", "title": "Implement bisection and Newton-Raphson", "url": "https://ocw.mit.edu/courses/18-330-introduction-to-numerical-analysis-spring-2012/", "minutes": 60},
     ],
+
+    # ---- Digital Signal Processing ------------------------------------- #
+    "sampling": [
+        {"type": "video", "title": "MIT OCW - Sampling", "url": "https://ocw.mit.edu/courses/res-6-007-signals-and-systems-spring-2011/", "minutes": 40},
+        {"type": "practice", "title": "Sampling and reconstruction exercises", "url": "https://ocw.mit.edu/courses/res-6-007-signals-and-systems-spring-2011/", "minutes": 40},
+    ],
+    "nyquist_theorem": [
+        {"type": "article", "title": "Nyquist-Shannon sampling theorem notes", "url": "https://ocw.mit.edu/courses/res-6-007-signals-and-systems-spring-2011/", "minutes": 25},
+        {"type": "practice", "title": "Minimum sampling rate problems", "url": "https://ocw.mit.edu/courses/res-6-007-signals-and-systems-spring-2011/", "minutes": 30},
+    ],
+    "aliasing": [
+        {"type": "video", "title": "Aliasing explained", "url": "https://ocw.mit.edu/courses/res-6-007-signals-and-systems-spring-2011/", "minutes": 25},
+        {"type": "practice", "title": "Identify aliased frequencies", "url": "https://ocw.mit.edu/courses/res-6-007-signals-and-systems-spring-2011/", "minutes": 30},
+    ],
+    "fourier_transform": [
+        {"type": "video", "title": "3Blue1Brown - But what is the Fourier Transform", "url": "https://www.3blue1brown.com/topics/analysis", "minutes": 25},
+        {"type": "practice", "title": "Fourier transform problem set", "url": "https://ocw.mit.edu/courses/res-6-007-signals-and-systems-spring-2011/", "minutes": 50},
+    ],
+    "dft_fft": [
+        {"type": "article", "title": "DFT and the FFT algorithm", "url": "https://ocw.mit.edu/courses/6-341-discrete-time-signal-processing-fall-2005/", "minutes": 35},
+        {"type": "practice", "title": "Compute an 8-point DFT by hand", "url": "https://ocw.mit.edu/courses/6-341-discrete-time-signal-processing-fall-2005/", "minutes": 45},
+    ],
+    "digital_filtering": [
+        {"type": "video", "title": "FIR and IIR filter design", "url": "https://ocw.mit.edu/courses/6-341-discrete-time-signal-processing-fall-2005/", "minutes": 45},
+        {"type": "practice", "title": "Filter design exercises", "url": "https://ocw.mit.edu/courses/6-341-discrete-time-signal-processing-fall-2005/", "minutes": 50},
+    ],
+
+    # ---- VLSI ------------------------------------------------------------ #
+    "semiconductor_physics": [
+        {"type": "video", "title": "Semiconductor fundamentals", "url": "https://nptel.ac.in/courses/117106091", "minutes": 45},
+        {"type": "article", "title": "Carriers, doping and junctions", "url": "https://nptel.ac.in/courses/117106091", "minutes": 30},
+    ],
+    "mosfet": [
+        {"type": "video", "title": "MOSFET operating regions", "url": "https://nptel.ac.in/courses/117101058", "minutes": 40},
+        {"type": "practice", "title": "MOSFET I-V characteristic problems", "url": "https://nptel.ac.in/courses/117101058", "minutes": 45},
+    ],
+    "threshold_voltage": [
+        {"type": "article", "title": "Threshold voltage and body effect", "url": "https://nptel.ac.in/courses/117101058", "minutes": 30},
+        {"type": "practice", "title": "Threshold voltage calculations", "url": "https://nptel.ac.in/courses/117101058", "minutes": 35},
+    ],
+    "mobility": [
+        {"type": "article", "title": "Carrier mobility and scattering", "url": "https://nptel.ac.in/courses/117106091", "minutes": 25},
+        {"type": "practice", "title": "Mobility and drift velocity problems", "url": "https://nptel.ac.in/courses/117106091", "minutes": 30},
+    ],
+    "velocity_saturation": [
+        {"type": "article", "title": "Short-channel velocity saturation", "url": "https://nptel.ac.in/courses/117101058", "minutes": 30},
+        {"type": "practice", "title": "Short-channel current model exercises", "url": "https://nptel.ac.in/courses/117101058", "minutes": 40},
+    ],
+    "channel_length_modulation": [
+        {"type": "article", "title": "Channel length modulation and output resistance", "url": "https://nptel.ac.in/courses/117101058", "minutes": 25},
+        {"type": "practice", "title": "Early voltage problems", "url": "https://nptel.ac.in/courses/117101058", "minutes": 30},
+    ],
+    "cmos_logic": [
+        {"type": "video", "title": "Static CMOS gate design", "url": "https://nptel.ac.in/courses/117101058", "minutes": 45},
+        {"type": "practice", "title": "Pull-up/pull-down network exercises", "url": "https://nptel.ac.in/courses/117101058", "minutes": 45},
+    ],
+
+    # ---- Computer Networks ------------------------------------------------ #
+    "network_models": [
+        {"type": "video", "title": "OSI and TCP/IP layering", "url": "https://gaia.cs.umass.edu/kurose_ross/videos.php", "minutes": 35},
+        {"type": "article", "title": "Layered architecture overview", "url": "https://gaia.cs.umass.edu/kurose_ross/", "minutes": 25},
+    ],
+    "circuit_switching": [
+        {"type": "article", "title": "Circuit vs packet switching", "url": "https://gaia.cs.umass.edu/kurose_ross/", "minutes": 20},
+        {"type": "practice", "title": "Switching comparison problems", "url": "https://gaia.cs.umass.edu/kurose_ross/", "minutes": 30},
+    ],
+    "packet_switching": [
+        {"type": "video", "title": "Packet switching and store-and-forward", "url": "https://gaia.cs.umass.edu/kurose_ross/videos.php", "minutes": 30},
+        {"type": "practice", "title": "Store-and-forward delay exercises", "url": "https://gaia.cs.umass.edu/kurose_ross/", "minutes": 35},
+    ],
+    "network_delay": [
+        {"type": "article", "title": "The four sources of packet delay", "url": "https://gaia.cs.umass.edu/kurose_ross/", "minutes": 25},
+        {"type": "practice", "title": "End-to-end delay calculations", "url": "https://gaia.cs.umass.edu/kurose_ross/", "minutes": 40},
+    ],
+    "tcp": [
+        {"type": "video", "title": "TCP reliability and congestion control", "url": "https://gaia.cs.umass.edu/kurose_ross/videos.php", "minutes": 45},
+        {"type": "practice", "title": "TCP window and throughput problems", "url": "https://gaia.cs.umass.edu/kurose_ross/", "minutes": 45},
+    ],
+    "routing": [
+        {"type": "video", "title": "Link-state and distance-vector routing", "url": "https://gaia.cs.umass.edu/kurose_ross/videos.php", "minutes": 40},
+        {"type": "practice", "title": "Dijkstra and Bellman-Ford exercises", "url": "https://gaia.cs.umass.edu/kurose_ross/", "minutes": 45},
+    ],
+
+    # ---- DBMS -------------------------------------------------------------- #
+    "relational_model": [
+        {"type": "video", "title": "The relational model", "url": "https://www.db-book.com/slides-dir/index.html", "minutes": 35},
+        {"type": "article", "title": "Keys and integrity constraints", "url": "https://www.db-book.com/", "minutes": 25},
+    ],
+    "functional_dependencies": [
+        {"type": "article", "title": "Functional dependencies and closures", "url": "https://www.db-book.com/", "minutes": 30},
+        {"type": "practice", "title": "Attribute closure exercises", "url": "https://www.db-book.com/slides-dir/index.html", "minutes": 40},
+    ],
+    "first_normal_form": [
+        {"type": "article", "title": "1NF and atomic values", "url": "https://www.db-book.com/", "minutes": 15},
+        {"type": "practice", "title": "Normalise to 1NF", "url": "https://www.db-book.com/slides-dir/index.html", "minutes": 25},
+    ],
+    "second_normal_form": [
+        {"type": "article", "title": "2NF and partial dependencies", "url": "https://www.db-book.com/", "minutes": 20},
+        {"type": "practice", "title": "Normalise to 2NF", "url": "https://www.db-book.com/slides-dir/index.html", "minutes": 30},
+    ],
+    "third_normal_form": [
+        {"type": "video", "title": "3NF and transitive dependencies", "url": "https://www.db-book.com/slides-dir/index.html", "minutes": 30},
+        {"type": "practice", "title": "Decompose into 3NF", "url": "https://www.db-book.com/", "minutes": 40},
+    ],
+    "bcnf": [
+        {"type": "article", "title": "BCNF and lossless decomposition", "url": "https://www.db-book.com/", "minutes": 30},
+        {"type": "practice", "title": "BCNF decomposition exercises", "url": "https://www.db-book.com/slides-dir/index.html", "minutes": 45},
+    ],
+    "sql_queries": [
+        {"type": "practice", "title": "SQL joins and aggregation exercises", "url": "https://www.db-book.com/slides-dir/index.html", "minutes": 45},
+        {"type": "video", "title": "SQL query fundamentals", "url": "https://www.db-book.com/", "minutes": 40},
+    ],
+    "transactions": [
+        {"type": "article", "title": "ACID, isolation levels and recovery", "url": "https://www.db-book.com/", "minutes": 35},
+        {"type": "practice", "title": "Serialisability exercises", "url": "https://www.db-book.com/slides-dir/index.html", "minutes": 40},
+    ],
+
+    # ---- AI / ML ----------------------------------------------------------- #
+    "regression": [
+        {"type": "video", "title": "Linear regression from scratch", "url": "https://www.statlearning.com/", "minutes": 40},
+        {"type": "practice", "title": "Fit and evaluate a regression model", "url": "https://scikit-learn.org/stable/supervised_learning.html", "minutes": 45},
+    ],
+    "classification": [
+        {"type": "video", "title": "Classification methods overview", "url": "https://www.statlearning.com/", "minutes": 45},
+        {"type": "practice", "title": "Train a classifier and read its metrics", "url": "https://scikit-learn.org/stable/supervised_learning.html", "minutes": 45},
+    ],
+    "feature_engineering": [
+        {"type": "article", "title": "Preprocessing and encoding in scikit-learn", "url": "https://scikit-learn.org/stable/modules/preprocessing.html", "minutes": 30},
+        {"type": "practice", "title": "Build a preprocessing pipeline", "url": "https://scikit-learn.org/stable/modules/compose.html", "minutes": 45},
+    ],
+    "model_evaluation": [
+        {"type": "article", "title": "Cross-validation and metrics", "url": "https://scikit-learn.org/stable/modules/cross_validation.html", "minutes": 35},
+        {"type": "practice", "title": "Compare models with cross-validation", "url": "https://scikit-learn.org/stable/modules/model_evaluation.html", "minutes": 45},
+    ],
+    "overfitting": [
+        {"type": "video", "title": "Bias-variance trade-off", "url": "https://www.statlearning.com/", "minutes": 30},
+        {"type": "practice", "title": "Regularisation experiments", "url": "https://scikit-learn.org/stable/modules/linear_model.html", "minutes": 40},
+    ],
+    "explainable_ai": [
+        {"type": "article", "title": "SHAP documentation and worked examples", "url": "https://shap.readthedocs.io/en/latest/", "minutes": 40},
+        {"type": "practice", "title": "Explain a model with SHAP", "url": "https://shap.readthedocs.io/en/latest/example_notebooks/overviews/An%20introduction%20to%20explainable%20AI%20with%20Shapley%20values.html", "minutes": 45},
+    ],
 }
 
 ACTION_BY_SEVERITY = {

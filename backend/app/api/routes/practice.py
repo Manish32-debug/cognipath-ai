@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.api.deps import authorise_student, current_user
 from app.database import db, practice_db
 from app.graph import root_cause
-from app.graph.knowledge_graph import CONCEPTS, label
+from app.graph.knowledge_graph import CONCEPTS, SUBJECTS, label, subject_of
 from app.ml import predictor
 from app.practice import config, mastery_update, scoring, selector
 from app.schemas.models import PracticeStartRequest, PracticeSubmitRequest
@@ -49,15 +49,26 @@ def practice_config() -> dict:
 
 
 @router.get("/recommended/{student_id}")
-def recommended(student_id: str, user: dict = Depends(current_user)) -> dict:
-    """Feature 3 + 6 + 13: what to practise, how much, why, and what to read first."""
+def recommended(student_id: str,
+                subject: str | None = Query(None, min_length=2, max_length=32),
+                user: dict = Depends(current_user)) -> dict:
+    """Feature 3 + 6 + 13: what to practise, how much, why, and what to read first.
+
+    `subject` (multi-subject upgrade) narrows the plan to one subject without
+    changing how concepts are scored.
+    """
     authorise_student(user, student_id)
     student = _load_student_or_404(student_id)
+    if subject is not None and subject not in SUBJECTS:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            f"Unknown subject '{subject}'")
     mastery, source = pipeline.ensure_mastery(student_id, student["features"])
     roots = root_cause.analyse(mastery)
-    result = selector.recommended_practice(mastery, roots, _risk_tier(student["features"]))
+    result = selector.recommended_practice(mastery, roots, _risk_tier(student["features"]),
+                                           subject=subject)
     return {
         "student_id": student_id,
+        "subject": subject,
         "mastery_source": source,
         "root_causes": [
             {"concept": r["concept"], "label": r["label"], "mastery": r["mastery"]}

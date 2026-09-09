@@ -8,6 +8,7 @@ import { endpoints } from '../services/api.js'
 
 const ITEMS = [
   { to: '/app', label: 'Overview', icon: '\u25A6', end: true },
+  { to: '/app/academics', label: 'Academic overview', icon: '\u2637' },
   { to: '/app/performance', label: 'Performance', icon: '\u2197' },
   { to: '/app/prediction', label: 'AI prediction', icon: '\u25C9' },
   { to: '/app/explainability', label: 'Explainability', icon: '\u2696' },

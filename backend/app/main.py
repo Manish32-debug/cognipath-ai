@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import analysis, auth, content, practice, students
+from app.api.routes import academics, analysis, auth, content, practice, students
 from app.core.config import settings
 from app.database import db
 from app.database.db import DatabaseError
@@ -93,6 +93,8 @@ app.include_router(students.router)
 app.include_router(analysis.router)
 app.include_router(practice.router)
 app.include_router(content.router)
+# Multi-subject academic records: subjects, assessments, trends, early warnings.
+app.include_router(academics.router)
 
 
 # ---------------------------------------------------------------------------

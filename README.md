@@ -1,12 +1,14 @@
 # CogniPath AI
 
-**An Explainable AI-Driven Platform for Student Performance Prediction and Personalized Learning Recommendation**
+**An Explainable AI-Powered Multi-Subject Student Intelligence and Personalized Learning Platform**
 
-CogniPath AI predicts academic performance from real academic and behavioural
-indicators, explains every prediction with SHAP, traces weak concepts backwards
-through a prerequisite knowledge graph to their *probable* origin, and converts
-that diagnosis into prioritised recommendations, a weekly study plan and a
-Cognitive Digital Twin.
+CogniPath AI tracks a student's academic progress over time across six subjects
+and six assessments per subject, predicts performance from that longitudinal
+record, explains every prediction with SHAP, traces weak concepts backwards
+through subject-aware prerequisite knowledge graphs to their *probable* origin,
+raises early warnings before a subject becomes a fail, and converts the whole
+diagnosis into prioritised recommendations, adaptive practice, a weekly study
+plan and a Cognitive Digital Twin.
 
 Nothing in the application is hardcoded. Every number the dashboard shows is
 produced at request time by a trained model, a SHAP explainer, a graph traversal
@@ -34,7 +36,10 @@ CogniPath AI addresses three gaps:
 |---|---|
 | Prediction | GPA (regression), pass probability (binary), risk tier (3-class) |
 | Explainability | Real SHAP attribution per prediction, split into helping / hurting factors |
-| Knowledge graph | 14-concept prerequisite DAG in NetworkX, interactive in the UI |
+| Multi-subject records | 6 subjects, 6+ assessments each, in a normalized subjects -> assessments -> results schema |
+| Trend detection | Least-squares slope + volatility over the assessment series: Improving / Declining / Stable / Volatile |
+| Early warning | Rule-based triggers that fire before a fail, each with its evidence, root cause and next steps |
+| Knowledge graph | 47-concept prerequisite DAG in NetworkX, per-subject views, cross-subject prerequisite edges |
 | Root-cause reasoning | Backward risk propagation with upstream-clearance damping |
 | Recommendation engine | Transparent priority scoring over concepts + curated resources |
 | Study plan | Weekly schedule derived from the student's own time budget and risk |
@@ -44,8 +49,9 @@ CogniPath AI addresses three gaps:
 | Learning-state update | Practice performance moves concept mastery through a damped, transparent, configurable rule |
 | Resource library | Study materials per concept, recommended by the same priority ranking as everything else |
 | Sample papers | PDF storage, upload validation and authenticated download |
-| Student dashboard | Fourteen sections: overview, performance, prediction, explainability, mastery, root cause, recommendations, plan, practice, practice history, study materials, sample papers, twin, settings |
-| Teacher dashboard | Cohort risk distribution, weakest-concept ranking, search/filter, per-student drill-down, question bank, resource and paper management, practice analytics |
+| Context-aware advice | Rule table mapping attendance / trend / mastery / practice accuracy to a study strategy |
+| Student dashboard | Sixteen sections, including Academic overview and per-subject detail: overview, academic overview, subject detail, performance, prediction, explainability, mastery, root cause, recommendations, plan, practice, practice history, study materials, sample papers, twin, settings |
+| Teacher dashboard | Subject analytics, assessment trends, declining/improving/high-risk lists, mark entry, cohort risk distribution, weakest-concept ranking, search/filter, per-student drill-down, question bank, resource and paper management, practice analytics |
 | Auth | JWT + PBKDF2-SHA256, server-enforced role separation |
 
 ## 3. Architecture
@@ -405,8 +411,12 @@ with a message telling you to run the training command.
 
 1. **Correlation, not causation.** Both the SHAP output and the graph traversal are inferential.
    Neither establishes cause.
-2. **G1/G2 dominance.** The models lean heavily on prior grades; they cannot predict for a student
-   with no assessment history.
+2. **Prior-grade dominance, and a compression step.** The models lean heavily on prior
+   performance and cannot predict for a student with no assessment history. Since the
+   multi-subject upgrade they read a *compressed* view of the assessment series (see 23.7):
+   real longitudinal input, but the models themselves were never retrained on
+   multi-assessment data, because no labelled multi-assessment dataset exists here. Volatility,
+   subject identity and per-subject trend are computed by rules and shown separately.
 3. **Dataset origin.** Two Portuguese secondary schools, 2005–2006, 395 students. Coefficients do
    not transfer unchanged to another institution — retrain on local data.
 4. **Simulated mastery in the demo cohort.** Clearly labelled; the pipeline is real but the
@@ -421,12 +431,23 @@ with a message telling you to run the training command.
 9. **Theory questions are self-marked.** There is no defensible way to grade free text here, so
    the student marks their own answer against the model answer. Self-marked attempts are stored
    with `graded_by='self'` and excluded from the learning-state update by default.
-10. **Thin question bank.** 42 seeded questions across 14 concepts. The recommender can ask for
-    up to 15 questions on a concept where only three exist; the UI reports what is actually
-    available, and the teacher analytics page shows which concepts are starved.
+10. **Thin question bank.** 87 seeded questions across 47 concepts — roughly two per concept for
+    the newer subjects. The recommender can ask for up to 15 questions on a concept where only
+    two exist; the UI reports what is actually available (`available_questions`), and the teacher
+    analytics page shows which concepts are starved. This is the most visible gap in the demo:
+    a subject page can recommend "practice 8 questions" and deliver two.
 11. **Sample papers are generated placeholders.** They carry no institutional status and are not
     official or previous-year university papers.
 12. **Uploads are not durable on ephemeral hosting.** See section 21.
+13. **Assessment series are simulated for demo students.** Deterministic, anchored to each
+    student's real record, labelled `source='simulated'` in the database and in the UI. A real
+    deployment records genuine marks through the teacher's Assessments page, and every analytic
+    then runs on real data with no code change.
+14. **Per-subject prediction reuses a single-subject model.** The same trained model is applied
+    to each subject's marks; it has no notion of which subject it is reading.
+15. **Subject risk and the ML risk tier can disagree.** They measure different things — one is a
+    rule over the assessment series, the other a trained classifier over student features. Both
+    are shown, each labelled with its method.
 
 ## 18. Responsible AI
 

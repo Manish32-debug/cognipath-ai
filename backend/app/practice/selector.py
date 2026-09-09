@@ -18,7 +18,7 @@ from __future__ import annotations
 import networkx as nx
 
 from app.database import practice_db
-from app.graph.knowledge_graph import get_graph, label
+from app.graph.knowledge_graph import get_graph, label, subject_of, unit_of
 from app.graph.root_cause import MASTERY_TARGET
 from app.practice import config
 from app.recommendations import engine
@@ -71,10 +71,18 @@ def explain_selection(ranked: dict, dependents: list[str]) -> str:
 
 
 def recommended_practice(mastery: dict[str, float], root_result: dict, risk_tier: str,
-                         max_concepts: int | None = None) -> dict:
-    """Prescribe practice per weak concept, ordered by the existing priority score."""
+                         max_concepts: int | None = None,
+                         subject: str | None = None) -> dict:
+    """Prescribe practice per weak concept, ordered by the existing priority score.
+
+    `subject` (multi-subject upgrade) restricts the plan to one subject's
+    concepts. It filters the ranked list rather than altering the scoring, so a
+    concept keeps the same priority in the subject view and the all-subject view.
+    """
     max_concepts = max_concepts or config.MAX_RECOMMENDED_CONCEPTS
     ranked = engine.score_concepts(mastery, root_result, risk_tier)
+    if subject:
+        ranked = [r for r in ranked if subject_of(r["concept"]) == subject]
     if not ranked:
         return {
             "items": [],
@@ -111,6 +119,8 @@ def recommended_practice(mastery: dict[str, float], root_result: dict, risk_tier
         items.append({
             "concept": concept,
             "label": r["label"],
+            "subject": subject_of(concept),
+            "unit": unit_of(concept),
             "mastery": r["mastery"],
             "risk": r["risk"],
             "is_root_cause": r["is_root_cause"],

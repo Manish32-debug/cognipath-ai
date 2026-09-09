@@ -36,6 +36,13 @@ services:
       python -m app.ml.train
       python -m app.database.seed
       python -m app.database.seed_content
+      # Multi-subject upgrade: subjects, assessment definitions and the
+      # question/resource/paper bank for the non-Mathematics subjects. Both are
+      # independently idempotent (INSERT ... ON CONFLICT / insert-if-absent), so
+      # running them unconditionally on every deploy is safe and is what keeps
+      # the Academic Overview populated on an instance whose database already exists.
+      python -m app.database.seed_multisubject
+      python -m app.database.seed_academics
 
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
 
