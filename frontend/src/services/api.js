@@ -85,6 +85,26 @@ export const endpoints = {
   deleteSamplePaper: (id) => api.delete(`/api/sample-papers/${id}`).then((r) => r.data),
 
   practiceAnalytics: () => api.get('/api/teacher/practice-analytics').then((r) => r.data),
+  // --- multi-subject academic records (upgrade) --------------------------- //
+  subjects: () => api.get('/api/subjects').then((r) => r.data),
+  createSubject: (payload) => api.post('/api/subjects', payload).then((r) => r.data),
+  subjectConcepts: (id) => api.get(`/api/subjects/${id}/concepts`).then((r) => r.data),
+  subjectGraph: (id) => api.get(`/api/subjects/${id}/knowledge-graph`).then((r) => r.data),
+  academics: (studentId) => api.get(`/api/students/${studentId}/academics`).then((r) => r.data),
+  subjectDetail: (studentId, subjectId) =>
+    api.get(`/api/students/${studentId}/academics/${subjectId}`).then((r) => r.data),
+  subjectPrediction: (studentId, subjectId) =>
+    api.get(`/api/students/${studentId}/academics/${subjectId}/prediction`).then((r) => r.data),
+  earlyWarnings: (studentId) =>
+    api.get(`/api/students/${studentId}/early-warnings`).then((r) => r.data),
+  assessments: (subjectId) =>
+    api.get('/api/assessments', { params: subjectId ? { subject_id: subjectId } : {} })
+      .then((r) => r.data),
+  createAssessment: (payload) => api.post('/api/assessments', payload).then((r) => r.data),
+  recordResult: (assessmentId, payload) =>
+    api.post(`/api/assessments/${assessmentId}/results`, payload).then((r) => r.data),
+  subjectAnalytics: () => api.get('/api/teacher/subject-analytics').then((r) => r.data),
+  mlProvenance: () => api.get('/api/ml/provenance').then((r) => r.data),
 }
 
 export default api

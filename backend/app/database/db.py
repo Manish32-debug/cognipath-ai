@@ -94,7 +94,7 @@ def init_db(path: Path | None = None) -> None:
     row is touched and the call is idempotent."""
     # Imported here rather than at module scope: practice_db imports get_conn
     # from this module.
-    from app.database import practice_db
+    from app.database import academics_db, practice_db
 
     with get_conn(path) as conn:
         # Write-ahead logging: submitting a practice session writes attempts,
@@ -103,6 +103,8 @@ def init_db(path: Path | None = None) -> None:
         conn.execute("PRAGMA journal_mode = WAL")
         conn.executescript(SCHEMA)
         practice_db.init_content_schema(conn)
+        # Multi-subject academic records (subjects, assessments, results).
+        academics_db.init_academics_schema(conn)
 
 
 # --------------------------------------------------------------------------- #

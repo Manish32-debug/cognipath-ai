@@ -256,3 +256,40 @@ class PracticeSubmitRequest(BaseModel):
     session_id: int
     answers: list[SubmittedAnswer] = Field(..., min_length=1, max_length=50)
     elapsed_seconds: float | None = Field(None, ge=0)
+
+
+# --------------------------------------------------------------------------- #
+# Multi-subject academic records (multi-subject upgrade)
+# --------------------------------------------------------------------------- #
+class SubjectCreate(BaseModel):
+    """Subjects are configuration, so a teacher can add one without a schema change."""
+
+    subject_id: str = Field(..., min_length=2, max_length=32, pattern=r"^[a-z0-9_]+$")
+    name: str = Field(..., min_length=2, max_length=80)
+    code: str | None = Field(None, max_length=12)
+    description: str | None = Field(None, max_length=400)
+    semester: str | None = Field(None, max_length=40)
+    credits: float | None = Field(None, ge=0, le=20)
+
+
+class AssessmentCreate(BaseModel):
+    subject_id: str = Field(..., min_length=2, max_length=32)
+    assessment_type: str = Field(..., min_length=2, max_length=32)
+    name: str = Field(..., min_length=1, max_length=60)
+    assessment_order: int = Field(..., ge=1, le=50)
+    max_marks: float = Field(100, gt=0, le=1000)
+    weight: float = Field(1.0, ge=0, le=10)
+    scheduled_on: str | None = Field(None, max_length=32)
+
+
+class AssessmentResultEntry(BaseModel):
+    student_id: str = Field(..., min_length=2, max_length=32)
+    marks: float = Field(..., ge=0, le=1000)
+
+
+class BulkResultRow(AssessmentResultEntry):
+    assessment_id: int = Field(..., ge=1)
+
+
+class BulkAssessmentResults(BaseModel):
+    results: list[BulkResultRow] = Field(..., min_length=1, max_length=500)

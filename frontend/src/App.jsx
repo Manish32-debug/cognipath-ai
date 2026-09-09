@@ -16,6 +16,9 @@ import Recommendations from './pages/student/Recommendations.jsx'
 import Plan from './pages/student/Plan.jsx'
 import Twin from './pages/student/Twin.jsx'
 import Settings from './pages/student/Settings.jsx'
+import Academics from './pages/student/Academics.jsx'
+import SubjectDetail from './pages/student/SubjectDetail.jsx'
+import { Assessments, SubjectAnalytics } from './pages/teacher/Academics.jsx'
 import Practice from './pages/student/Practice.jsx'
 import Resources from './pages/student/Resources.jsx'
 import SamplePapers from './pages/student/SamplePapers.jsx'
@@ -34,6 +37,8 @@ export default function App() {
 
       <Route path="/app" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>}>
         <Route index element={<Overview />} />
+        <Route path="academics" element={<Academics />} />
+        <Route path="academics/:subjectId" element={<SubjectDetail />} />
         <Route path="performance" element={<Performance />} />
         <Route path="prediction" element={<Prediction />} />
         <Route path="explainability" element={<Explainability />} />
@@ -51,6 +56,8 @@ export default function App() {
 
       <Route path="/teacher" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>}>
         <Route index element={<Cohort />} />
+        <Route path="subject-analytics" element={<SubjectAnalytics />} />
+        <Route path="assessments" element={<Assessments />} />
         <Route path="questions" element={<Questions />} />
         <Route path="resources" element={<TeacherResources />} />
         <Route path="sample-papers" element={<TeacherSamplePapers />} />

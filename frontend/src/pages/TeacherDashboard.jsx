@@ -10,6 +10,8 @@ import Sidebar from '../components/Sidebar.jsx'
  *  `pages/teacher/Cohort.jsx` and is now the index route. */
 const ITEMS = [
   { to: '/teacher', label: 'Cohort overview', icon: '\u25A6', end: true },
+  { to: '/teacher/subject-analytics', label: 'Subject analytics', icon: '\u2637' },
+  { to: '/teacher/assessments', label: 'Assessments', icon: '\u25A5' },
   { to: '/teacher/questions', label: 'Question bank', icon: '\u2261' },
   { to: '/teacher/resources', label: 'Study materials', icon: '\u2726' },
   { to: '/teacher/sample-papers', label: 'Sample papers', icon: '\u2637' },
