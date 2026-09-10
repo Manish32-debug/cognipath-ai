@@ -48,9 +48,35 @@ function SubjectBody({ detail, graph, subjectId }) {
     context_advice: advice, ml_prediction: ml, practice_performance: practice } = detail
   const { summary, trend, risk, assessments } = performance
 
-  const series = assessments.map((a) => ({
-    name: a.name, percentage: a.percentage, marks: a.marks, max: a.max_marks, source: a.source,
+  // Six recorded academic grades + predicted final.
+  // The existing API assessment order is preserved.
+  const series = assessments.map((a, i) => ({
+    grade: `Grade ${i + 1}`,
+    name: a.name,
+    percentage: a.percentage,
+    marks: a.marks,
+    max: a.max_marks,
+    source: a.source,
   }))
+
+  const predictedFinalPct = ml?.prediction
+    ? Number(ml.prediction.predicted_gpa) * 10
+    : null
+
+  const timeline = predictedFinalPct === null
+    ? series
+    : [
+        ...series,
+        {
+          grade: 'Final',
+          name: 'predicted',
+          percentage: predictedFinalPct,
+          predicted: true,
+        },
+      ]
+
+  const chartMinWidth = Math.max(360, timeline.length * 92)
+
   const masteryMap = {}
   mastery.concepts.forEach((c) => { masteryMap[c.concept] = c.mastery })
 
@@ -60,7 +86,7 @@ function SubjectBody({ detail, graph, subjectId }) {
         <StatCard label="Current level" value={percent(summary.recent_average)}
           hint={`Latest assessment ${percent(summary.current)}`} />
         <StatCard label="Subject average" value={percent(summary.average)}
-          hint={`Best ${percent(summary.best)} \u00B7 worst ${percent(summary.worst)}`} />
+          hint={`Best ${percent(summary.best)} · worst ${percent(summary.worst)}`} />
         <StatCard label="Trend" value={`${trendArrow(trend.direction)} ${trend.trend}`}
           tone={trendColor(trend.direction)}
           hint={`${trend.slope > 0 ? '+' : ''}${trend.slope} points per assessment`} />
@@ -68,32 +94,120 @@ function SubjectBody({ detail, graph, subjectId }) {
           hint={`Consistency ${percent(summary.consistency)}`} />
       </div>
 
-      <Card title={`${performance.subject_name} \u2014 assessment timeline`}
+      <Card title={`${performance.subject_name} — assessment timeline`}
         subtitle={`${summary.n_assessments} recorded assessments. ${trend.description}`}>
-        <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={series} margin={{ left: -18, right: 16, top: 8 }}>
-            <CartesianGrid stroke="#253052" strokeDasharray="3 3" />
-            <XAxis dataKey="name" stroke="#9aa6c4" fontSize={11} />
-            <YAxis domain={[0, 100]} stroke="#9aa6c4" fontSize={11} />
-            <ReferenceLine y={40} stroke="#f87171" strokeDasharray="4 3"
-              label={{ value: 'pass mark', fill: '#f87171', fontSize: 10, position: 'insideBottomRight' }} />
-            <Tooltip
-              contentStyle={{ background: '#141c33', border: '1px solid #253052', borderRadius: 10, fontSize: 12 }}
-              formatter={(value, _n, p) => [`${value}% (${p.payload.marks}/${p.payload.max})`, 'Score']} />
-            <Line type="monotone" dataKey="percentage" stroke="#6366f1" strokeWidth={2.4}
-              dot={{ r: 4, fill: '#22d3ee' }} activeDot={{ r: 6 }} />
-          </LineChart>
-        </ResponsiveContainer>
+
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: chartMinWidth }}>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={timeline} margin={{ left: -18, right: 16, top: 8 }}>
+                <CartesianGrid stroke="#253052" strokeDasharray="3 3" />
+
+                <XAxis
+                  dataKey="grade"
+                  stroke="#9aa6c4"
+                  fontSize={11}
+                  interval={0}
+                  tick={<GradeTick data={timeline} />}
+                />
+
+                <YAxis domain={[0, 100]} stroke="#9aa6c4" fontSize={11} />
+
+                <ReferenceLine
+                  y={40}
+                  stroke="#f87171"
+                  strokeDasharray="4 3"
+                  label={{
+                    value: 'pass mark',
+                    fill: '#f87171',
+                    fontSize: 10,
+                    position: 'insideBottomRight',
+                  }}
+                />
+
+                <Tooltip
+                  contentStyle={{
+                    background: '#141c33',
+                    border: '1px solid #253052',
+                    borderRadius: 10,
+                    fontSize: 12,
+                  }}
+                  formatter={(value, _n, p) => {
+                    if (p.payload.predicted) {
+                      return [`${Number(value).toFixed(1)}% predicted`, 'Final']
+                    }
+
+                    return [
+                      `${Number(value).toFixed(1)}% (${p.payload.marks}/${p.payload.max})`,
+                      p.payload.name || 'Score',
+                    ]
+                  }}
+                />
+
+                <Line
+                  type="monotone"
+                  dataKey="percentage"
+                  stroke="#6366f1"
+                  strokeWidth={2.4}
+                  dot={(props) => {
+                    const { cx, cy, payload } = props
+
+                    if (payload?.predicted) {
+                      return (
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r={6}
+                          fill="#141c33"
+                          stroke="#22d3ee"
+                          strokeWidth={2.5}
+                        />
+                      )
+                    }
+
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={4}
+                        fill="#22d3ee"
+                      />
+                    )
+                  }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="notice" style={{ marginTop: '.6rem' }}>
+          <b>Timeline:</b> Grade 1 through Grade {series.length} are recorded
+          assessments. The Final point is the model prediction, not a recorded grade.
+        </div>
 
         <div className="notice" style={{ marginTop: '.6rem' }}>
           <b>Risk reasoning:</b> {risk.reason} <span className="tiny">({risk.method})</span>
         </div>
 
         <table style={{ marginTop: '.8rem' }}>
-          <thead><tr><th>Assessment</th><th>Type</th><th>Marks</th><th>Percentage</th><th>Source</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Grade</th>
+              <th>Assessment</th>
+              <th>Type</th>
+              <th>Marks</th>
+              <th>Percentage</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+
           <tbody>
-            {assessments.map((a) => (
+            {assessments.map((a, i) => (
               <tr key={a.assessment_id}>
+                <td className="small">
+                  <b>Grade {i + 1}</b>
+                </td>
                 <td className="small">{a.name}</td>
                 <td className="small">{a.type}</td>
                 <td className="mono">{a.marks} / {a.max_marks}</td>
@@ -101,6 +215,25 @@ function SubjectBody({ detail, graph, subjectId }) {
                 <td className="tiny muted">{a.source}</td>
               </tr>
             ))}
+
+            {predictedFinalPct !== null && (
+              <tr>
+                <td className="small">
+                  <b>Final</b>
+                </td>
+                <td className="small">
+                  <b>Final Examination</b>
+                </td>
+                <td className="small">final</td>
+                <td className="mono">not recorded</td>
+                <td className="mono">
+                  {percent(predictedFinalPct)}
+                </td>
+                <td className="tiny muted">
+                  <span className="badge badge-info">predicted</span>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </Card>
@@ -108,10 +241,20 @@ function SubjectBody({ detail, graph, subjectId }) {
       {ml?.prediction && (
         <Card title="Model prediction for this subject" subtitle={ml.basis}>
           <div className="grid grid-3">
-            <StatCard label="Predicted GPA" value={num(ml.prediction.predicted_gpa)} suffix="/ 10" />
-            <StatCard label="Pass probability" value={percent(ml.prediction.pass_probability * 100)} />
-            <StatCard label="Risk tier" value={ml.prediction.risk_tier}
-              tone={riskColor(ml.prediction.risk_tier)} />
+            <StatCard
+              label="Predicted GPA"
+              value={num(ml.prediction.predicted_gpa)}
+              suffix="/ 10"
+            />
+            <StatCard
+              label="Pass probability"
+              value={percent(ml.prediction.pass_probability * 100)}
+            />
+            <StatCard
+              label="Risk tier"
+              value={ml.prediction.risk_tier}
+              tone={riskColor(ml.prediction.risk_tier)}
+            />
           </div>
         </Card>
       )}
@@ -126,14 +269,24 @@ function SubjectBody({ detail, graph, subjectId }) {
                 {mastery.concepts.map((c) => (
                   <div key={c.concept}>
                     <div className="between" style={{ marginBottom: '.2rem' }}>
-                      <span className="small">{c.label} <span className="tiny muted">({c.unit})</span></span>
+                      <span className="small">
+                        {c.label} <span className="tiny muted">({c.unit})</span>
+                      </span>
                       <span className="row">
                         <span className={riskClass(c.risk)}>{c.risk}</span>
                         <span className="tiny mono muted">{percent(c.mastery)}</span>
                       </span>
                     </div>
-                    <Bar value={c.mastery}
-                      color={c.mastery < 40 ? '#f87171' : c.mastery < 60 ? '#fbbf24' : '#34d399'} />
+                    <Bar
+                      value={c.mastery}
+                      color={
+                        c.mastery < 40
+                          ? '#f87171'
+                          : c.mastery < 60
+                            ? '#fbbf24'
+                            : '#34d399'
+                      }
+                    />
                   </div>
                 ))}
               </div>
@@ -147,17 +300,22 @@ function SubjectBody({ detail, graph, subjectId }) {
             : (
               <div className="stack">
                 {roots.map((r) => (
-                  <div key={r.concept} className="card"
-                    style={{ background: 'var(--bg-alt)', boxShadow: 'none' }}>
+                  <div
+                    key={r.concept}
+                    className="card"
+                    style={{ background: 'var(--bg-alt)', boxShadow: 'none' }}
+                  >
                     <div className="row wrap">
                       <span className="badge badge-root">likely root cause</span>
                       <strong>{r.label}</strong>
                       <span className={riskClass(r.risk)}>{percent(r.mastery)}</span>
                     </div>
-                    <p className="small" style={{ margin: '.5rem 0 0' }}>{r.reasoning}</p>
+                    <p className="small" style={{ margin: '.5rem 0 0' }}>
+                      {r.reasoning}
+                    </p>
                     {r.affected_concepts?.length > 0 && (
                       <div className="tiny mono muted" style={{ marginTop: '.4rem' }}>
-                        {r.affected_concepts[0].path_labels.join('  \u2192  ')}
+                        {r.affected_concepts[0].path_labels.join('  →  ')}
                       </div>
                     )}
                   </div>
@@ -167,17 +325,29 @@ function SubjectBody({ detail, graph, subjectId }) {
         </Card>
       </div>
 
-      <Async loading={graph.loading} error={graph.error} onRetry={graph.reload}
-        label="Loading the subject knowledge graph..." height={260}>
+      <Async
+        loading={graph.loading}
+        error={graph.error}
+        onRetry={graph.reload}
+        label="Loading the subject knowledge graph..."
+        height={260}
+      >
         {graph.data && (
-          <Card title={`${graph.data.subject_name} prerequisite graph`}
-            subtitle={`${graph.data.stats.n_nodes} concepts, ${graph.data.stats.n_edges} prerequisites. Node values are your mastery.`}>
-            <KnowledgeGraph graph={graph.data} mastery={masteryMap} rootCauses={roots} />
+          <Card
+            title={`${graph.data.subject_name} prerequisite graph`}
+            subtitle={`${graph.data.stats.n_nodes} concepts, ${graph.data.stats.n_edges} prerequisites. Node values are your mastery.`}
+          >
+            <KnowledgeGraph
+              graph={graph.data}
+              mastery={masteryMap}
+              rootCauses={roots}
+            />
+
             {graph.data.external_prerequisites?.length > 0 && (
               <div className="tiny muted" style={{ marginTop: '.6rem' }}>
                 Prerequisites from other subjects:{' '}
                 {graph.data.external_prerequisites
-                  .map((e) => `${e.source_label} \u2192 ${e.target_label}`)
+                  .map((e) => `${e.source_label} → ${e.target_label}`)
                   .join(', ')}
               </div>
             )}
@@ -185,33 +355,56 @@ function SubjectBody({ detail, graph, subjectId }) {
         )}
       </Async>
 
-      <Card title="Recommended practice for this subject"
-        subtitle={plan.message || 'Difficulty is matched to your current mastery in each concept.'}
-        right={practice.attempted
-          ? <span className="chip">{practice.attempted} attempts \u00B7 {percent((practice.accuracy || 0) * 100)} accuracy</span>
-          : undefined}>
+      <Card
+        title="Recommended practice for this subject"
+        subtitle={
+          plan.message ||
+          'Difficulty is matched to your current mastery in each concept.'
+        }
+        right={
+          practice.attempted
+            ? (
+              <span className="chip">
+                {practice.attempted} attempts · {percent((practice.accuracy || 0) * 100)} accuracy
+              </span>
+            )
+            : undefined
+        }
+      >
         {plan.items.length === 0
           ? <p className="small">Nothing below the mastery target in this subject.</p>
           : (
             <div className="stack">
               {plan.items.map((item) => (
-                <div key={item.concept} className="card"
-                  style={{ background: 'var(--bg-alt)', boxShadow: 'none' }}>
+                <div
+                  key={item.concept}
+                  className="card"
+                  style={{ background: 'var(--bg-alt)', boxShadow: 'none' }}
+                >
                   <div className="between">
                     <div className="row wrap">
                       <strong>{item.label}</strong>
-                      <span className={riskClass(item.risk)}>{percent(item.mastery)} mastery</span>
+                      <span className={riskClass(item.risk)}>
+                        {percent(item.mastery)} mastery
+                      </span>
                       <span className="chip">{item.difficulty}</span>
-                      {item.is_root_cause && <span className="badge badge-root">root cause</span>}
+                      {item.is_root_cause && (
+                        <span className="badge badge-root">root cause</span>
+                      )}
                     </div>
+
                     <Link to="/app/practice" className="btn btn-sm btn-primary">
                       Practice {item.available_questions || item.recommended_questions} questions
                     </Link>
                   </div>
-                  <p className="small" style={{ margin: '.5rem 0 0' }}>{item.reason}</p>
+
+                  <p className="small" style={{ margin: '.5rem 0 0' }}>
+                    {item.reason}
+                  </p>
+
                   {item.resources?.length > 0 && (
                     <div className="tiny muted" style={{ marginTop: '.4rem' }}>
-                      Study first: {item.resources.map((r) => r.title).join(' \u00B7 ')}
+                      Study first: {item.resources.map((r) => r.title).join(' · ')}
                     </div>
                   )}
                 </div>
@@ -220,24 +413,70 @@ function SubjectBody({ detail, graph, subjectId }) {
           )}
       </Card>
 
-      <Card title="How to study this subject"
-        subtitle="Rule-based advice from your attendance, study time, trend, mastery and practice accuracy.">
+      <Card
+        title="How to study this subject"
+        subtitle="Rule-based advice from your attendance, study time, trend, mastery and practice accuracy."
+      >
         <div className="stack">
           {advice.map((a, i) => (
-            <div key={i} className="card" style={{ background: 'var(--bg-alt)', boxShadow: 'none' }}>
+            <div
+              key={i}
+              className="card"
+              style={{ background: 'var(--bg-alt)', boxShadow: 'none' }}
+            >
               <div className="row wrap">
                 <strong>{a.strategy}</strong>
                 <span className="chip tiny">rule: {a.rule}</span>
               </div>
-              <p className="small" style={{ margin: '.45rem 0 .3rem' }}>{a.advice}</p>
+
+              <p className="small" style={{ margin: '.45rem 0 .3rem' }}>
+                {a.advice}
+              </p>
+
               <div className="tiny muted">{a.why}</div>
-              <ul className="small" style={{ margin: '.4rem 0 0 1rem', color: 'var(--muted)' }}>
-                {a.actions.map((action, k) => <li key={k}>{action}</li>)}
+
+              <ul
+                className="small"
+                style={{ margin: '.4rem 0 0 1rem', color: 'var(--muted)' }}
+              >
+                {a.actions.map((action, k) => (
+                  <li key={k}>{action}</li>
+                ))}
               </ul>
             </div>
           ))}
         </div>
       </Card>
     </>
+  )
+}
+
+function GradeTick({ x, y, payload, data }) {
+  const point = data?.find((d) => d.grade === payload.value)
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={12}
+        textAnchor="middle"
+        fill="#9aa6c4"
+        fontSize={11}
+      >
+        {payload.value}
+      </text>
+
+      <text
+        x={0}
+        y={0}
+        dy={25}
+        textAnchor="middle"
+        fill="#5c6890"
+        fontSize={9.5}
+      >
+        {point?.name || ''}
+      </text>
+    </g>
   )
 }
